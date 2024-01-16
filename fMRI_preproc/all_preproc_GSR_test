@@ -1,0 +1,156 @@
+#! /bin/bash -f
+# Written by Aaron Kucyi
+# For BIDS-organized data with a  single session for each subject (i.e., no subfolder for sessions within BIDS folder)
+
+# Required inputs:
+# 1. Name of folder containing organized data (in bids or bids-like format)
+# 2. Subject name (name of folder containing subject data)
+# 3. Run name (full name of fMRI file without nifti suffix)
+
+usage() {
+	echo ""
+	echo "Usage: all_preproc_GSR <path_to_bids_folder> <name_of_bids_folder> <subject_name> <name_of_func_run>"
+	echo "example: all_preproc_GSR /work/kucyi/data/Hung_MW/bids_data sub-001 bold_run1"
+	echo "(3 inputs required)"
+	echo "This function performs all preprocessing on one BOLD run, using global signal regression (uses anat scan from same session for registration)"
+	echo "output will be in <path_to_bids_folder>/derivatives/subject"
+}
+
+if [[ $# -eq 0 ]] ; then
+	usage
+	exit
+fi
+
+start=$(date +%s)
+## Load modules
+ml afni/21.2.00
+ml fsl/6.0.7.4
+
+## Initate inputs, paths and output paths
+bids_path=$1
+sub=$2
+run=$3
+path=`echo ${bids_path%/*}`
+data_folder=`basename ${bids_path}`
+mkdir -p ${path}/derivatives
+mkdir -p ${path}/derivatives/${sub}
+mkdir -p ${path}/derivatives/${sub}
+mkdir -p ${path}/derivatives/${sub}/anat
+mkdir -p ${path}/derivatives/${sub}/func
+func_path=${path}/${data_folder}/${sub}/func
+output_path=${path}/derivatives/${sub}
+echo "path to subject/session is $1/$2/$3"
+echo "output path is set to $output_path"
+echo "input path is ${path}/${data_folder}/${sub}"
+
+## Segment T1 into WM, CSF, GM (if not already done)
+if [ ! -f ${output_path}/anat/anat_brain.nii.gz ]; then
+	echo "performing brain extraction for ${sub}"
+	anat_file=`find ${path}/${data_folder}/${sub}/anat -name "*.nii.gz"`
+	bet ${anat_file} ${output_path}/anat/anat_brain -B -f 0.25 -g 0
+	echo "performing FAST segmentation for ${sub}"
+	fast -t 1 -g -o ${output_path}/anat/anat_brain.nii.gz
+	echo "done FAST segmentation"
+else
+	echo "skipping segmentation (already done)"
+fi
+
+## Set up Pre-GSR FEAT preprocessing template
+run_file=`find ${path}/${data_folder}/${sub}/func -name "${run}*nii*"`
+echo "fMRI file is $run_file"
+# remove prior .fsf files and Prestats folders
+rm -f ${output_path}/func/*.fsf
+rm -r -f ${output_path}/func/Prestats_GSR_${run}.feat
+echo "Creating FSF file for GSR subject: " $sub
+Prestats_GSR=`which Prestats_GSR.fsf`
+scripts_dir=${Prestats_GSR%/*}
+sed -e "s/####SUBJECT####/${sub}/g" ${Prestats_GSR} > ${output_path}/temp2.fsf
+sed -e "s/####RUN####/${run}/g" ${output_path}/temp2.fsf > ${output_path}/temp3.fsf
+tr=`fslinfo ${func_path}/${run} | grep "^pixdim4" | awk '{print $2}'`
+echo "TR = ${tr}"
+volumes=`fslinfo ${func_path}/${run} | grep "^dim4" | awk '{print $2}'`
+echo "n volumes = ${volumes}"
+sed -e "s/####TR####/${tr}/g" ${output_path}/temp3.fsf > ${output_path}/temp4.fsf
+sed -e "s/####VOLUMES####/${volumes}/g" ${output_path}/temp4.fsf > ${output_path}/temp5.fsf
+sed -e "s+####PATH####+${path}+g" ${output_path}/temp5.fsf > ${output_path}/temp6.fsf
+sed -e "s+####FUNCDIR####+${func_path}+g" ${output_path}/temp6.fsf > ${output_path}/temp7.fsf
+sed -e "s/####VOLUMES####/${volumes}/g" ${output_path}/temp7.fsf > ${output_path}/${sub}_Prestats_GSR_${run}.fsf
+mv ${output_path}/${sub}_Prestats_GSR_${run}.fsf ${output_path}/func
+rm -f ${output_path}/temp*
+echo "done making pre-GSR FEAT setup for ${sub} ${run}"
+
+## Run FEAT for pre-GSR (brain extraction, motion correction, registration)
+echo "running Pre-GSR FEAT preprocessing"
+feat ${output_path}/func/${sub}_Prestats_GSR_${run}.fsf
+echo "done FEAT for GSR pipeline, ${sub} ${run}: check registration and motion"
+
+## Threshold WM and CSF volumes (set WM and CSF volumes to 198000 and 20000)
+# register WM and CSF to func
+flirt -in ${output_path}/anat/anat_brain_pve_0.nii.gz -ref ${output_path}/func/Prestats_GSR_${run}.feat/example_func.nii.gz -applyxfm -init ${output_path}/func/Prestats_GSR_${run}.feat/reg/highres2example_func.mat -out ${output_path}/func/CSF_func_${run}
+flirt -in ${output_path}/anat/anat_brain_pve_2.nii.gz -ref ${output_path}/func/Prestats_GSR_${run}.feat/example_func.nii.gz -applyxfm -init ${output_path}/func/Prestats_GSR_${run}.feat/reg/highres2example_func.mat -out ${output_path}/func/WM_func_${run}
+final_wm_vol=198000
+final_csf_vol=20000
+# get volume of unthresholded WM and CSF
+wm_vol=`fslstats ${output_path}/func/WM_func_${run} -V` 
+csf_vol=`fslstats ${output_path}/func/CSF_func_${run} -V`
+wm_vol=$(echo $wm_vol | awk '{print $2}')
+csf_vol=$(echo $csf_vol | awk '{print $2}')
+# get % of voxels in WM and CSF volumes to retain and set intensity threshold
+wm_retain=`python -c "print ($final_wm_vol / float($wm_vol) )"`
+csf_retain=`python -c "print ($final_csf_vol / float($csf_vol)  )"`
+wm_cutoff=`python -c "print (100-($wm_retain*100) )"`
+csf_cutoff=`python -c "print (100-($csf_retain*100) )"`
+wm_thr=`fslstats ${output_path}/func/WM_func_${run} -P $wm_cutoff`
+csf_thr=`fslstats ${output_path}/func/CSF_func_${run} -P $csf_cutoff`
+# compute and output thresholded WM and CSF volumes
+fslmaths ${output_path}/func/WM_func_${run} -thr $wm_thr -bin ${output_path}/func/WM_thr_${run}
+fslmaths ${output_path}/func/CSF_func_${run} -thr $csf_thr -bin ${output_path}/func/CSF_thr_${run}
+
+## Extract time series for global signal, thresholded WM, thresholded CSF
+# extract global signal time series
+fslmeants -i ${output_path}/func/Prestats_GSR_${run}.feat/filtered_func_data -o ${output_path}/func/global_${run}.txt -m ${output_path}/func/Prestats_GSR_${run}.feat/mask
+echo "done extracting global signal"
+
+# extract WM time series
+fslmeants -i ${output_path}/func/Prestats_GSR_${run}.feat/filtered_func_data -o ${output_path}/func/WM_${run}.txt -m ${output_path}/func/WM_thr_${run}
+echo "done extracting WM"
+
+# extract CSF time series
+fslmeants -i ${output_path}/func/Prestats_GSR_${run}.feat/filtered_func_data -o ${output_path}/func/CSF_${run}.txt -m ${output_path}/func/CSF_thr_${run}
+echo "done extracting CSF"
+
+## Regress out global signal, WM, CSF and motion parameters
+fsl_regfilt -i  ${output_path}/func/Prestats_GSR_${run}.feat/filtered_func_data -d ${output_path}/func/global_${run}.txt -o ${output_path}/func/filtered_func_data_global -f "1"
+echo "done regressing out global signal"
+
+fsl_regfilt -i ${output_path}/func/filtered_func_data_global -d  ${output_path}/func/WM_${run}.txt -o ${output_path}/func/filtered_func_data_global_WM -f "1"
+echo "done regressing out WM"
+
+fsl_regfilt -i ${output_path}/func/filtered_func_data_global_WM -d  ${output_path}/func/CSF_${run}.txt -o ${output_path}/func/filtered_func_data_global_WM_CSF -f "1"
+echo "done regressing out CSF"
+
+fsl_regfilt -i ${output_path}/func/filtered_func_data_global_WM_CSF -o ${output_path}/func/GSR_nosmooth_${run} -d ${output_path}/func/Prestats_GSR_${run}.feat/mc/prefiltered_func_data_mcf.par -f "1,2,3,4,5,6"
+rm -f ${output_path}/func/filtered_func_data_global.nii.gz ${output_path}/func/filtered_func_data_global_WM.nii.gz ${output_path}/func/filtered_func_data_global_WM_CSF.nii.gz
+echo "done regressing out global signal, WM, CSF and MPs for ${sub} ${run}"
+
+## Spatial smoothing at 6mm FWHM
+fslmaths ${output_path}/func/GSR_nosmooth_${run} -kernel gauss 2.5478 -fmean -mas ${output_path}/func/Prestats_GSR_${run}.feat/mask ${output_path}/func/GSR_smooth_${run}
+rm -f ${output_path}/func/GSR_nosmooth_${run}.nii.gz
+
+## Run bandpass filtering (0.01 - 0.1 Hz)
+rm -f ${output_path}/func/GSR_preproc_${run}.nii.gz # remove if over-writing
+fslmaths ${output_path}/func/GSR_smooth_${run} -Tmean ${output_path}/func/tempMean
+3dBandpass -notrans -nodetrend -prefix ${output_path}/func/GSR_preproc_${run}.nii.gz 0.01 0.1 ${output_path}/func/GSR_smooth_${run}.nii.gz
+fslmaths ${output_path}/func/GSR_preproc_${run}.nii.gz -add ${output_path}/func/tempMean ${output_path}/func/GSR_preproc_${run}.nii.gz
+rm -f ${output_path}/func/tempMean.nii.gz ${output_path}/func/GSR_smooth_${run}.nii.gz
+echo "done 0.01-0.1 Hz temporal filtering"
+echo "done GSR preprocessing for ${sub} ${run}! "
+
+## Transform preprocessed data to MNI space
+flirt -in ${output_path}/func/GSR_preproc_${run} -ref ${scripts_dir}/MNI152_T1_2mm_brain -out ${output_path}/func/GSR_preproc_${run}_MNI -applyxfm -init ${output_path}/func/Prestats_GSR_${run}.feat/reg/example_func2standard.mat -interp trilinear
+end=$(date +%s)
+end_mins=`python -c "print (($end-$start)/60 )"`
+echo "done transforming GSR-preprocessed data to MNI space! Total time: $end_mins minutes"
+
+
+
