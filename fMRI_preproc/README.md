@@ -9,5 +9,5 @@ To make sure that you can run the _all_preproc_GSR_ function from any terminal (
 
 1. In the terminal, cd to the PSY600-2024 folder and type _chmod -R 777_fMRI_preproc._ This will set permissions to make commands executable.
   
-2. Edit your .bashrc file to make the functions executable from any location within the terminal. The .bashrc file is a 'hidden' text file in your home directory that can be edited. Within a Neurodesktop terminal, cd to your home directory (e.g. /home/jovyan) and type _gedit .bashrc.___ A text editor will open with the contents of _.bashrc_. At the bottom of the file, add this line and then save (assuming the location below is where you saved/cloned this code):
+2. Edit your .bashrc file to make the functions executable from any location within the terminal. The .bashrc file is a 'hidden' text file in your home directory that can be edited. Within a Neurodesktop terminal, cd to your home directory (e.g. /home/jovyan) and type _gedit .bashrc_. A text editor will open with the contents of _.bashrc_. At the bottom of the file, add this line and then save (assuming the location below is where you saved/cloned this code):
 _PATH="/home/jovyan/neurodesktop-storage/code/PSY600-2024/fMRI_preproc:${PATH}"_
