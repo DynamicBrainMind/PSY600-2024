@@ -64,6 +64,7 @@ rm -r -f ${output_path}/func/Prestats_GSR_${run}.feat
 echo "Creating FSF file for GSR subject: " $sub
 Prestats_GSR=`which Prestats_GSR.fsf`
 scripts_dir=${Prestats_GSR%/*}
+echo "scripts directory: ${scripts_dir}"
 sed -e "s/####SUBJECT####/${sub}/g" ${Prestats_GSR} > ${output_path}/temp2.fsf
 sed -e "s/####RUN####/${run}/g" ${output_path}/temp2.fsf > ${output_path}/temp3.fsf
 tr=`fslinfo ${func_path}/${run} | grep "^pixdim4" | awk '{print $2}'`
@@ -74,7 +75,7 @@ sed -e "s/####TR####/${tr}/g" ${output_path}/temp3.fsf > ${output_path}/temp4.fs
 sed -e "s/####VOLUMES####/${volumes}/g" ${output_path}/temp4.fsf > ${output_path}/temp5.fsf
 sed -e "s+####PATH####+${path}+g" ${output_path}/temp5.fsf > ${output_path}/temp6.fsf
 sed -e "s+####FUNCDIR####+${func_path}+g" ${output_path}/temp6.fsf > ${output_path}/temp7.fsf
-sed -e "s+####MNIDIR####+${scripts_dir}+g" ${output_path}/temp7.fsf > ${output_path}/temp8.fsf
+sed -e "s+####STANDARD####+${scripts_dir}+g" ${output_path}/temp7.fsf > ${output_path}/temp8.fsf
 sed -e "s/####VOLUMES####/${volumes}/g" ${output_path}/temp8.fsf > ${output_path}/${sub}_Prestats_GSR_${run}.fsf
 mv ${output_path}/${sub}_Prestats_GSR_${run}.fsf ${output_path}/func
 rm -f ${output_path}/temp1.fsf ${output_path}/temp2.fsf ${output_path}/temp3.fsf ${output_path}/temp4.fsf 
