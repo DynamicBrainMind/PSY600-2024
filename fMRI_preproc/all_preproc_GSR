@@ -74,9 +74,11 @@ sed -e "s/####TR####/${tr}/g" ${output_path}/temp3.fsf > ${output_path}/temp4.fs
 sed -e "s/####VOLUMES####/${volumes}/g" ${output_path}/temp4.fsf > ${output_path}/temp5.fsf
 sed -e "s+####PATH####+${path}+g" ${output_path}/temp5.fsf > ${output_path}/temp6.fsf
 sed -e "s+####FUNCDIR####+${func_path}+g" ${output_path}/temp6.fsf > ${output_path}/temp7.fsf
-sed -e "s/####VOLUMES####/${volumes}/g" ${output_path}/temp7.fsf > ${output_path}/${sub}_Prestats_GSR_${run}.fsf
+sed -e "s+####MNIDIR####+${scripts_dir}+g" ${output_path}/temp7.fsf > ${output_path}/temp8.fsf
+sed -e "s/####VOLUMES####/${volumes}/g" ${output_path}/temp8.fsf > ${output_path}/${sub}_Prestats_GSR_${run}.fsf
 mv ${output_path}/${sub}_Prestats_GSR_${run}.fsf ${output_path}/func
-rm -f "$output_path"/temp*
+rm -f ${output_path}/temp1.fsf ${output_path}/temp2.fsf ${output_path}/temp3.fsf ${output_path}/temp4.fsf 
+rm -f ${output_path}/temp5.fsf ${output_path}/temp6.fsf ${output_path}/temp7.fsf ${output_path}/temp8.fsf 
 echo "done making pre-GSR FEAT setup for ${sub} ${run}"
 
 ## Run FEAT for pre-GSR (brain extraction, motion correction, registration)

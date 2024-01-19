@@ -239,7 +239,7 @@ set fmri(regstandard_yn) 1
 set fmri(alternateReference_yn) 0
 
 # Standard image
-set fmri(regstandard) "####PATH####/scripts/fMRI_preproc_demo/MNI152_T1_2mm_brain"
+set fmri(regstandard) "####MNIPATH####/MNI152_T1_2mm_brain"
 
 # Search space for registration to standard space
 # 0   : No search
