@@ -4,9 +4,9 @@ The function _run_seedtovoxel_GLM_ uses functions from FSL to performed seed-to-
 
 1. Full path to bids folder
 2. Subject name
-3. Full path to ROI file to extract and used for seed-to-voxel analysis (without .nii/.nii.gz suffix)
+3. Full path to ROI file in MNI152-2mm space to extract and used for seed-to-voxel analysis (without .nii/.nii.gz suffix)
 4. Name of preprocessed fMRI data file (must be located within derivatives/<sub>/func)
-5. Output path name (set by the user) -- you may want to label the output path to indicate which ROI was used which preprocessing method was used (e.g. "PCC_GSR")
+5. Output path name (set by the user) -- you may want to label this to indicate which ROI was used which preprocessing method was used (e.g. "PCC_GSR")
 
 Outputs will be in the "analysis" folder parallel to your bids folder.
 
