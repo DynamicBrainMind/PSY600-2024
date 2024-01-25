@@ -1,4 +1,4 @@
-# Seed to voxel functional connectivity analysis
+# Demo: Seed-to-voxel functional connectivity analysis
 
 The function _run_seedtovoxel_GLM_ uses functions from FSL to performed seed-to-voxel functional connectivity analysis. Before using this function, you should preprocess your fMRI data using [this code](https://github.com/DynamicBrainMind/PSY600-2024/tree/main/fMRI_preproc), as the function is compatible with those outputs. You should also choose/define a region of interest in MNI152-2mm space (for example, from a functional brain atlas). The function takes in the following input arguments (all 5 required):
 
