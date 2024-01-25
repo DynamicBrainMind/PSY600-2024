@@ -1,0 +1,86 @@
+#! /bin/bash -f
+# Written by Aaron Kucyi
+# Register an ROI in MNI152-2mm space to BOLD space and extract mean time series
+# Assumes that you have used all_preproc_GSR function for preprocessing
+
+# Required inputs:
+# 1. Path to bids folder
+# 2. Subject name
+# 3. Full path to ROI file to extract (without .nii/.nii.gz suffix)
+# 4. Name of preprocessed fMRI data file (must be located within derivatives/sub/func)
+# 5. Output path name
+
+usage() {
+	echo ""
+	echo "Usage: extract_ROI_timeseries_GSR <path_to_bids_folder> <subject_name> <roi_file_with_full_path> <name_of_preproc_fMRI_data> <output_path_name>"
+	echo "example: extract_ROI_timeseries_GSR ~/neurodesktop-storage/data/kucyi/bids_data sub-001 ~/neurodesktop-storage/atlases/Schaefer/ROIs/PCC GSR_preproc_rest PCC_GSR"
+	echo "(5 inputs required)"
+	echo "This function registers an ROI in MNI152-2mm space to BOLD space, then extracts the mean BOLD time series, the runs seed-based functional connectivity from preprocessed fMRI data using a GLM"
+	echo "output will be in the 'analysis' folder"
+}
+
+if [[ $# -eq 0 ]] ; then
+	usage
+	exit
+fi
+
+start=$(date +%s)
+## Load modules
+ml fsl/6.0.7.4
+
+## Initate inputs, paths and output paths
+bids_path=$1
+sub=$2
+roi_path=$3
+preproc_data=$4
+out_feat=$5
+roi_name=`basename ${roi_path}`
+path=`echo ${bids_path%/*}`
+deriv_path=${path}/derivatives
+out_path=${deriv_path}/${sub}/func/ROIs
+mkdir -p ${out_path}
+mkdir -p ${path}/analysis
+mkdir -p ${path}/analysis/${sub}
+func_path=${path}/analysis/${sub}
+
+## register ROI to BOLD space and binarize
+flirt -in ${roi_path} -applyxfm -init ${deriv_path}/${sub}/func/Prestats_GSR_rest.feat/reg/standard2example_func.mat -out ${out_path}/${roi_name} -paddingsize 0.0 -interp trilinear -ref ${deriv_path}/${sub}/func/Prestats_GSR_rest.feat/example_func.nii.gz
+
+fslmaths ${out_path}/${roi_name} -bin ${out_path}/${roi_name}
+echo "done registering ${roi_name} to BOLD space"
+
+## compute ROI mean time series from preprocessed BOLD data
+fslmeants -i ${deriv_path}/${sub}/func/GSR_preproc_rest -o ${out_path}/${roi_name}_${preproc_data}.txt -m ${out_path}/${roi_name}
+echo "done computing ${roi_name} mean time series"
+echo "output is in ${out_path}"
+
+## Make FEAT .fsf template for seed-to-voxel GLM
+echo "Creating FSF file for first-level GLM for $sub (seed region: ${roi_name})"
+SeedtoVoxel=`which SeedtoVoxel_template.fsf`
+scripts_dir=${SeedtoVoxel%/*}
+#cd ${func_path}
+rm -r -f ${func_path}/${roi_name}.feat # remove prior first level folders
+rm -f ${func_path}/${roi_name}.fsf # remove prior .fsf files
+echo "scripts directory: ${scripts_dir}"
+tr=`fslinfo ${path}/derivatives/${sub}/func/${preproc_data} | grep "^pixdim4" | awk '{print $2}'`
+echo "TR = ${tr}"
+volumes=`fslinfo ${path}/derivatives/${sub}/func/${preproc_data} | grep "^dim4" | awk '{print $2}'`
+echo "n volumes = ${volumes}"
+sed -e "s/####SUBJECT####/${sub}/g" ${SeedtoVoxel} > ${func_path}/temp2.fsf
+sed -e "s/####TR####/${tr}/g" ${func_path}/temp2.fsf > ${func_path}/temp3.fsf
+sed -e "s/####VOLUMES####/${volumes}/g" ${func_path}/temp3.fsf > ${func_path}/temp4.fsf
+sed -e "s+####PATH####+${path}+g" ${func_path}/temp4.fsf > ${func_path}/temp5.fsf
+sed -e "s+####PREPROCDATA####+${preproc_data}+g" ${func_path}/temp5.fsf > ${func_path}/temp6.fsf
+sed -e "s+####STANDARD####+${scripts_dir}+g" ${func_path}/temp6.fsf > ${func_path}/temp7.fsf
+sed -e "s+####SEED####+${roi_name}+g" ${func_path}/temp7.fsf > ${func_path}/temp8.fsf
+sed -e "s+####OUTFEAT####+${out_feat}+g" ${func_path}/temp8.fsf > ${func_path}/${roi_name}_${preproc_data}.fsf
+
+## Run GLM
+echo "running first-level GLM for ${sub} and seed region: ${roi_name}"
+feat ${func_path}/${roi_name}_${preproc_data}.fsf
+rm -f ${roi_name}_${preproc_data}.fsf
+echo "done first-level GLM for ${sub}"
+
+
+
+
