@@ -1,6 +1,6 @@
 #! /bin/bash -f
 # Written by Aaron Kucyi
-# Register an ROI in MNI152-2mm space to BOLD space and extract mean time series
+# Run seed-to-voxel functional connectivity analysis in one run for one subject
 # Assumes that you have used all_preproc_GSR function for preprocessing
 
 # Required inputs:
@@ -12,9 +12,12 @@
 
 usage() {
 	echo ""
-	echo "Usage: extract_ROI_timeseries_GSR <path_to_bids_folder> <subject_name> <roi_file_with_full_path> <name_of_preproc_fMRI_data> <output_path_name>"
+	echo "Usage: run_seedtovoxel_GLM <path_to_bids_folder> <subject_name> <roi_file_with_full_path> <name_of_preproc_fMRI_data> <output_path_name>"
+	echo ""
 	echo "example: extract_ROI_timeseries_GSR ~/neurodesktop-storage/data/kucyi/bids_data sub-001 ~/neurodesktop-storage/atlases/Schaefer/ROIs/PCC GSR_preproc_rest PCC_GSR"
+	echo ""
 	echo "(5 inputs required)"
+	echo ""
 	echo "This function registers an ROI in MNI152-2mm space to BOLD space, then extracts the mean BOLD time series, the runs seed-based functional connectivity from preprocessed fMRI data using a GLM"
 	echo "output will be in the 'analysis' folder"
 }
@@ -74,6 +77,7 @@ sed -e "s+####PREPROCDATA####+${preproc_data}+g" ${func_path}/temp5.fsf > ${func
 sed -e "s+####STANDARD####+${scripts_dir}+g" ${func_path}/temp6.fsf > ${func_path}/temp7.fsf
 sed -e "s+####SEED####+${roi_name}+g" ${func_path}/temp7.fsf > ${func_path}/temp8.fsf
 sed -e "s+####OUTFEAT####+${out_feat}+g" ${func_path}/temp8.fsf > ${func_path}/${roi_name}_${preproc_data}.fsf
+rm -f ${func_path}/temp2.fsf ${func_path}/temp3.fsf ${func_path}/temp4.fsf ${func_path}/temp5.fsf ${func_path}/temp6.fsf ${func_path}/temp7.fsf ${func_path}/temp8.fsf
 
 ## Run GLM
 echo "running first-level GLM for ${sub} and seed region: ${roi_name}"
