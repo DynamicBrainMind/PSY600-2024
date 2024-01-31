@@ -14,8 +14,6 @@ usage() {
 	echo ""
 	echo "Usage: run_seedtovoxel_GLM <path_to_bids_folder> <subject_name> <roi_file_with_full_path> <name_of_preproc_fMRI_data> <output_path_name>"
 	echo ""
-	echo "example: extract_ROI_timeseries_GSR ~/neurodesktop-storage/data/kucyi/bids_data sub-001 ~/neurodesktop-storage/atlases/Schaefer/ROIs/PCC GSR_preproc_rest PCC_GSR"
-	echo ""
 	echo "(5 inputs required)"
 	echo ""
 	echo "This function registers an ROI in MNI152-2mm space to BOLD space, then extracts the mean BOLD time series, the runs seed-based functional connectivity from preprocessed fMRI data using a GLM"

@@ -1,0 +1,48 @@
+#! /bin/bash -f
+# Written by Aaron Kucyi
+# Extract BOLD time series from all regions in an atlas in MNI152-2mm space
+# Assumes that you have used all_preproc_GSR function for preprocessing
+
+# Required inputs:
+# 1. Path to bids folder
+# 2. Subject name
+# 3. Full path to atlas file to extract (without .nii/.nii.gz suffix)
+
+usage() {
+	echo ""
+	echo "Usage: extract_ts_atlas <path_to_bids_folder> <subject_name> <atlas_file_with_full_path>"
+	echo ""
+	echo "(3 inputs required)"
+	echo ""
+	echo "This function extracts the time series from all regions within an atlas"
+	echo "output text file will be in 'derivatives' in a folder called 'ROIs' within the subject/func directory"
+}
+
+if [[ $# -eq 0 ]] ; then
+	usage
+	exit
+fi
+
+start=$(date +%s)
+## Load modules
+ml fsl/6.0.7.4
+
+## Initate inputs, paths and output paths
+bids_path=$1
+sub=$2
+atlas_path=$3
+
+atlas_name=`basename ${atlas_path}`
+path=`echo ${bids_path%/*}`
+deriv_path=${path}/derivatives
+out_path=${deriv_path}/${sub}/func/ROIs
+mkdir -p ${out_path}
+
+## compute ROI mean time series from preprocessed BOLD data
+fslmeants -i ${deriv_path}/${sub}/func/GSR_preproc_rest_MNI -o ${out_path}/${atlas_name}_${preproc_data}.txt --label=${atlas_path}.nii.gz
+echo "done computing mean time series ${atlas_name} "
+echo "output is in ${out_path}"
+
+
+
+
