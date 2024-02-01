@@ -1,16 +1,16 @@
-function [IDX,C]=SWC_kmeans(k)
+function [IDX,C]=SWC_kmeans(k,window_length)
 %% Calculate sliding-window correlations between ROIs extracted from Schaefer 100-region atlas in one fMRI run
-% This function perform kmeans clustering on sliding-window functional
-% connectivity matrices and plots
+% This function perform kmeans clustering on sliding-window functional connectivity matrices and plots
 
 % Required input:
 % 1. k (number of clusters)
+% 2. Window length in seconds for sliding-window correlations (assumes TR=2sec)
  
-% Upon running, you must select a text file that contains BOLD time series extracted from
-% the Schaefer100 atals
+% Upon running, you must select a text file that contains BOLD time series extracted from the Schaefer100 atals
 
 %% settings
-window_length=15; % number of TRs per window
+TR=2;
+window_length=window_length/TR; % 
 cluster_iterations=100; % # of iterations for kmeans clustering
 
 %% Load atlas time series data
@@ -124,7 +124,7 @@ figure(2)
     yline(FPCN_interval+size(SN,2)+0.5,'linewidth',2);
     
  %% Silhoutte plot
- figure(3)
- silhouette(allwindows_FC_2D',IDX,'Euclidean')
- hold on
- xline(0.6,'k--')
+ %figure(3)
+ %silhouette(allwindows_FC_2D',IDX,'Euclidean')
+ %hold on
+ %xline(0.6,'k--')
