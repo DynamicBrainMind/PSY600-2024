@@ -1,6 +1,6 @@
 # Demo: Connectome-based Predictive Modeling (CPM)
 
-These Matlab functions are slightly modified from those [at this page](https://github.com/DynamicBrainMind/CPM_CONN) for the purposes of our demo.
+These Matlab functions are slightly modified from those [at this page](https://github.com/DynamicBrainMind/CPM_CONN) for the purposes of our demo, where we will predict age from whole-brain functional connectivity using resting-state fMRI data from the [Brain Genomics Superstruct Project](https://www.nature.com/articles/sdata201531) and the [MPI-Leipzig Mind-Brain-Body dataset](https://www.nature.com/articles/sdata2018308) .
 
 **Functions**
 
