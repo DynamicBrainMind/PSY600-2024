@@ -1,15 +1,13 @@
 function CPM_view_networks(cpm,atlas,norm)
 
 % Extract top intra- and inter-network contributors to a CPM
-% written by Aaron Kucyi, Northeastern University
+% written by Aaron Kucyi
 % INPUTS:
 % cpm (required)        : structure containing pos_mask and neg_mask (e.g.
 %                       the output from CPM_internal.m when setting train_mode to 2) 
 % atlas (required)      : 1=Shen268, 2=Schaefer300 (7Networks), 3=Schaefer300 (17Networks)
 % dataset (required)    : name of dataset folder name
 % norm (optional)       : 0 = no normalization; 1 = normalize # of features per network pair by total # of network pairs
-% OUTPUTS:
-% saves figure within cpm_results/figs
 
 %% Settings
 nfeatures=5; % # of top feature types to extract
